@@ -18,3 +18,16 @@ def test_count_predictions_by_class() -> None:
     object_counts = count(predictions)
     assert sorted(object_counts, key=lambda x: x.object_class) == \
         [ObjectCount(object_class='cat', count=2), ObjectCount(object_class='dog', count=1)]
+
+def test_filter_predictions_at_threshold_boundary() -> None:
+    predictions = [
+        generate_prediction('dog', 0.89),
+        generate_prediction('cat', 0.90),
+        generate_prediction('rabbit', 0.91)]
+
+    good_predictions = over_threshold(predictions, 0.90)
+
+    assert list(good_predictions) == [
+        generate_prediction('cat', 0.90),
+        generate_prediction('rabbit', 0.91)]
+

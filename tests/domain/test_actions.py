@@ -31,3 +31,14 @@ class TestCountDetectedObjects:
         CountDetectedObjects(object_detector, count_object_repo).execute(None, 0)
         count_object_repo.update_values.assert_called_with(
             [ObjectCount('cat', 2), ObjectCount('dog', 2), ObjectCount('rabbit', 1)])
+    
+    def test_empty_predictions(self, count_object_repo):
+        object_detector = Mock()
+        object_detector.predict.return_value = []
+        response = CountDetectedObjects(object_detector,count_object_repo).execute(None, 0.5)
+        assert response.current_objects == []
+        count_object_repo.update_values.assert_called_with([])
+
+    def test_read_total_counts_after_update(self, object_detector, count_object_repo):
+        CountDetectedObjects(object_detector,count_object_repo).execute(None, 0.5)
+        count_object_repo.read_values.assert_called_once()
