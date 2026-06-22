@@ -65,7 +65,7 @@ class TestObjectCountE2E:
                 }
 
                 # Object List Endpoint
-=                with open(image_path, "rb") as f:
+                with open(image_path, "rb") as f:
 
                     object_list_response = client.post(
                         "/object-list",
@@ -89,7 +89,7 @@ class TestObjectCountE2E:
                     obj["class_name"]: obj["score"]
                     for obj in prediction_body
                 }
-=
+
                 if not expected_classes.issubset(current_classes):
 
                     above_threshold = []
