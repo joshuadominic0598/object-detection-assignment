@@ -22,69 +22,31 @@ The object detection model is served through TensorFlow Serving using the SSD Mo
 The application follows a Hexagonal Architecture pattern and is composed of three main layers:
 
 ## EntryPoints
-
 Responsible for:
-
 * Exposing REST APIs
 * Receiving requests
 * Validating inputs
 * Returning responses
 
 ## Domain
-
 Responsible for:
-
 * Business logic
-* Object counting rules
-* Orchestrating interactions between adapters
-* Applying domain-specific validations
+* Orchestrating interactions between adapters and models
 
 ## Adapters
-
 Responsible for:
-
 * Communicating with external services
 * Translating domain models into external representations
 * Translating external responses into domain objects
 
-Examples include:
-
-* TensorFlow Serving adapter
-* Database adapters (MongoDB / MySQL)
-
----
-
-# Features
-
-## Object Detection
-
-Detects objects in uploaded images using SSD MobileNet V2.
-
-## Threshold Filtering
-
-Allows users to specify a confidence threshold for filtering predictions.
-
-## Persistent Object Counts
-
-Stores cumulative object counts across requests.
-
-## Object Listing
-
-Provides a dedicated endpoint to return detected objects above the specified confidence threshold without updating persisted counts.
-
 ## Database Support
-
 Supports:
-
 * MySQL
 * MongoDB
-
 Database selection is configurable through environment variables.
 
 ## Automated Testing
-
 Includes:
-
 * Unit Tests
 * Integration Tests
 * End-to-End (E2E) Tests
