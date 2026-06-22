@@ -1,28 +1,27 @@
-# NIQ Innovation Enablement - Object Counter Challenge
+# Object Counter Challenge
 
 ## Overview
-
 The goal of this repository is to demonstrate how to apply **Hexagonal Architecture (Ports & Adapters)** in a Machine Learning based system.
 
-This application exposes a Flask API that receives:
+This application exposes two Flask APIs that both receive:
 
 * An image
 * A confidence threshold
 
 and returns:
 
-* Objects detected in the current image
-* Running totals of all detected objects persisted in the database
+1. Count of objects detected in the current image, along with total cummulative counts of all detected objects previously
+2. List of objects returned for a particular threshold
 
 The object detection model is served through TensorFlow Serving using the SSD MobileNet V2 model trained on the COCO dataset.
 
 ---
 
-## Architecture
+# Architecture
 
 The application follows a Hexagonal Architecture pattern and is composed of three main layers:
 
-### EntryPoints
+## EntryPoints
 
 Responsible for:
 
@@ -31,7 +30,7 @@ Responsible for:
 * Validating inputs
 * Returning responses
 
-### Domain
+## Domain
 
 Responsible for:
 
@@ -40,7 +39,7 @@ Responsible for:
 * Orchestrating interactions between adapters
 * Applying domain-specific validations
 
-### Adapters
+## Adapters
 
 Responsible for:
 
@@ -55,252 +54,97 @@ Examples include:
 
 ---
 
-## Features
+# Features
 
-### Object Detection
+## Object Detection
 
 Detects objects in uploaded images using SSD MobileNet V2.
 
-### Threshold Filtering
+## Threshold Filtering
 
 Allows users to specify a confidence threshold for filtering predictions.
 
-### Persistent Object Counts
+## Persistent Object Counts
 
 Stores cumulative object counts across requests.
 
-### Object Listing
-Provides a dedicated endpoint to return the list of detected objects above the specified confidence threshold without updating or returning persisted counts.
+## Object Listing
 
-### Database Support
+Provides a dedicated endpoint to return detected objects above the specified confidence threshold without updating persisted counts.
+
+## Database Support
 
 Supports:
-* MongoDB
+
 * MySQL
+* MongoDB
+
 Database selection is configurable through environment variables.
 
-### Automated Testing
+## Automated Testing
 
 Includes:
+
 * Unit Tests
 * Integration Tests
 * End-to-End (E2E) Tests
 
-E2E tests validate:
-
-* Object class detection
-* Persistence behavior
-* Aggregate object counts
-
 ---
 
-# Setup TensorFlow Model
+# Quick Start
 
-## Unix / macOS
+## Prerequisites
 
-```bash
-mkdir -p tmp/model/ssd_mobilenet_v2/1
+The following software must be installed:
 
-curl -L -o tmp/model.tar.gz \
-http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_coco_2018_03_29.tar.gz
+* Python 3.10+
+* Docker
 
-tar -xzvf tmp/model.tar.gz -C tmp/model
-
-mv \
-tmp/model/ssd_mobilenet_v2_coco_2018_03_29/saved_model/saved_model.pb \
-tmp/model/ssd_mobilenet_v2/1
-
-chmod -R 777 tmp/model
-
-rm tmp/model.tar.gz
-rm -rf tmp/model/ssd_mobilenet_v2_coco_2018_03_29
-```
-
-Expected directory structure:
-
-```text
-tmp/
-└── model/
-    └── ssd_mobilenet_v2/
-        └── 1/
-            └── saved_model.pb
-```
-
----
-
-# Run TensorFlow Serving
-
-## Unix / macOS
+Verify installation:
 
 ```bash
-num_physical_cores=$(sysctl -n hw.physicalcpu)
-
-docker run --rm -d \
-    --name=tfserving \
-    -p 8501:8501 \
-    --mount type=bind,source=$(pwd)/tmp/model,target=/models \
-    -e OMP_NUM_THREADS=$num_physical_cores \
-    -e TENSORFLOW_INTRA_OP_PARALLELISM=$num_physical_cores \
-    -e MODEL_NAME=ssd_mobilenet_v2 \
-    tensorflow/serving
+python3 --version
+docker --version
 ```
 
-## Linux
+## Clone Repository
 
 ```bash
-num_physical_cores=$(lscpu --all --parse=SOCKET,CORE | grep -v '^#' | uniq | wc -l)
-
-docker run --rm -d \
-    --name=tfserving \
-    -p 8501:8501 \
-    --mount type=bind,source=$(pwd)/tmp/model,target=/models \
-    -e OMP_NUM_THREADS=$num_physical_cores \
-    -e TENSORFLOW_INTRA_OP_PARALLELISM=$num_physical_cores \
-    -e MODEL_NAME=ssd_mobilenet_v2 \
-    tensorflow/serving
+git clone https://github.com/joshuadominic0598/object-detection-assignment
+cd object-detection-assignment
 ```
 
-## Windows (PowerShell)
-
-```powershell
-$num_physical_cores=(Get-WmiObject Win32_Processor | Select-Object NumberOfCores).NumberOfCores
-
-docker run --rm -d `
-    --name=tfserving `
-    -p 8501:8501 `
-    -v "$pwd\tmp\model:/models" `
-    -e OMP_NUM_THREADS=$num_physical_cores `
-    -e TENSORFLOW_INTRA_OP_PARALLELISM=$num_physical_cores `
-    -e MODEL_NAME=ssd_mobilenet_v2 `
-    tensorflow/serving
-```
-
----
-
-# Database Setup
-
-## MongoDB
+## Start Application
 
 ```bash
-docker run --rm \
-  --name test-mongo \
-  -p 27017:27017 \
-  -d mongo:latest
+make start
 ```
 
-## MySQL
+The setup process is fully automated.
 
-```bash
-docker run --rm \
-  --name test-mysql \
-  -e MYSQL_ROOT_PASSWORD=root \
-  -e MYSQL_DATABASE=counter \
-  -p 3306:3306 \
-  -d mysql:8
-```
+The startup script will automatically:
 
-After startup:
+* Create a Python virtual environment
+* Install Python dependencies
+* Create a default `.env` file if one does not exist
+* Download the TensorFlow model
+* Start TensorFlow Serving
+* Start the configured database (MySQL or MongoDB)
+* Create required database objects
+* Launch the Flask application
 
-```sql
-CREATE DATABASE IF NOT EXISTS counter; -- Docker should create this already
-
-USE counter;
-
---- You need to create a table manually in your MYSQL for it to persist data
-CREATE TABLE IF NOT EXISTS object_counts ( 
-    object_class VARCHAR(255) PRIMARY KEY,
-    count INT NOT NULL
-);
-```
-
----
-
-# Environment Configuration
-
-Create a `.env` file in the project root.
-
-Example:
-
-```env
-ENV=prod
-
---- here you can change to mongodb if that is your preferred DB
-DB_TYPE=mysql
-
-MYSQL_HOST=localhost
-MYSQL_PORT=3306
-MYSQL_USER=root
-MYSQL_PASSWORD=root
-MYSQL_DB=counter
-
-MONGO_HOST=localhost
-MONGO_PORT=27017
-MONGO_DB=counter
-
-TFS_URL=http://localhost:8501/v1/models/ssd_mobilenet_v2:predict
-```
-
----
-
-# Python Environment Setup
-
-Python 3.10+ recommended.
-
-## Unix / macOS
-
-```bash
-python3 -m venv .venv
-
-source .venv/bin/activate
-
-pip install -r requirements.txt
-
-export PYTHONPATH=.
-```
-
-## Windows PowerShell
-
-```powershell
-python3 -m venv .venv
-
-.venv\Scripts\Activate.ps1
-
-pip install -r requirements.txt
-
-$Env:PYTHONPATH="."
-```
-
----
-
-# Run the Application
-
-## Using Fake Services
-
-```bash
-python -m counter.entrypoints.webapp
-```
-
-## Using Real Services
-
-```bash
-ENV=prod python -m counter.entrypoints.webapp
-```
-
-or
-
-```bash
-python -m counter.entrypoints.webapp
-```
-
-when using a configured `.env` file.
-
-Application runs on:
+Application URL:
 
 ```text
 http://localhost:5000
 ```
 
+Please Note: No manual TensorFlow, database, or environment setup is required.
+- By default, the setup script will automatically provision a Dockerized MySQL instance (or MongoDB, depending on `DB_TYPE`) and create all required database objects.
+- If you prefer to use your own MySQL instance, update the database connection settings in the `.env` file (`MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_DB`) before running `make start`.
+- The application will then connect to your existing database instead of the automatically provisioned container.
 ---
+
 # API Endpoints
 
 ## POST /object-count
@@ -309,81 +153,162 @@ Detects objects in an image and updates persistent object counts.
 
 ### Request
 
-- file: image file
-- threshold: confidence threshold
+* file: image file
+* threshold: confidence threshold
 
 ### Response
 
 Returns:
 
-- current_objects: objects detected in the current image
-- total_objects: cumulative object counts stored in the database
+* current_objects
+* total_objects
+
+Example:
+
+```bash
+curl -F "threshold=0.9" \
+     -F "file=@resources/images/boy.jpg" \
+     http://localhost:5000/object-count
+```
+
+---
 
 ## POST /object-list
 
-Detects objects in an image and returns all objects whose confidence score exceeds the provided threshold.
+Detects objects in an image and returns all objects whose confidence score exceeds the specified threshold.
 
 ### Request
 
-- file: image file
-- threshold: confidence threshold
+* file: image file
+* threshold: confidence threshold
 
 ### Response
 
-Returns a list of detected objects, including:
+Returns:
 
-- object_class
-- confidence score
-- bounding box coordinates (if available)
+* object class
+* confidence score
+* bounding box coordinates
 
-### Example Use Cases
+Example:
 
-- Validate model predictions
-- Inspect detections without affecting persisted counts
-- Experiment with different confidence thresholds
-- Troubleshoot object-count discrepancies
+```bash
+curl -F "threshold=0.9" \
+     -F "file=@resources/images/boy.jpg" \
+     http://localhost:5000/object-list
+```
 
-# Call the service
- curl -F "threshold=0.9" -F "file=@resources/images/boy.jpg" http://localhost:5000/object-count
- curl -F "threshold=0.9" -F "file=@resources/images/boy.jpg" http://localhost:5000/object-list
-
+---
 
 # Running Tests
 
-Run all tests:
+## Run All Tests
 
 ```bash
 pytest
 ```
 
-Run Integration tests:
+## Run Integration Tests
+- test mongodb, tensorflow or mysql connections
 
 ```bash
 pytest tests/integration -v
 ```
 
-Run E2E tests:
+## Run E2E Tests
+- test end to end working of the app, set your own test cases and get feedback on performance
 
 ```bash
 pytest tests/e2e -v
 ```
 
-Run a specific E2E test:
+## Run Specific E2E Test
 
 ```bash
 pytest tests/e2e/test_object_class.py -v
+pytest tests/e2e/test_object_persistance.py -v
+
+```
+We can establish what classes we hope to detect from an image as well as, what total counts we expect if the model runs through the list of images. This directly helps tune the thresholding required for a particular use case.
+---
+
+### Object Detection Validation
+
+Verifies expected object classes are detected from sample images.
+
+Example image:
+
+```text
+boy_bowl_cup.jpg
 ```
 
-Shorter failure trace:
+Expected classes:
 
-```bash
-pytest tests/e2e -v --tb=short
+```python
+['bowl', 'cup', 'dining table', 'person']
 ```
+
+Example model output:
+
+```text
+Passed Threshold:
+['person (0.999)', 'dining table (0.922)']
+
+Detected But Below Threshold:
+['cup (0.418)']
+
+Not Detected:
+['bowl']
+
+All Predictions:
+[
+ 'person (0.999)',
+ 'dining table (0.922)',
+ 'cup (0.418)',
+ 'orange (0.317)'
+]
+```
+
+### Threshold Filtering Validation
+
+Ensures only predictions above the specified threshold are returned.
+
+### Database Persistence Validation
+
+Ensures counts accumulate across requests.
+
+Example:
+
+Request 1:
+
+```text
+person = 1
+```
+
+Request 2:
+
+```text
+person = 2
+```
+
+This validates:
+
+* Database connectivity
+* Repository implementation
+* Aggregate counting logic
+* Persistence behavior
+
+### Object Count Endpoint Validation
+
+Ensures:
+
+* current_objects reflects only the current request
+* total_objects reflects cumulative persisted counts
 
 ---
 
 # Notes
 
-* TensorFlow Serving must be running before executing production mode tests.
-* MySQL or MongoDB must be running when using `ENV=prod`.
-* Object counts persist across requests when using a real database.
+* The first startup may take several minutes because the TensorFlow model is downloaded automatically.
+* Subsequent startups reuse the downloaded model.
+* Object counts persist across requests when using a real database - Otherwise need to set up .env file connected to your MYSQL instance - then requests modify only your table.
