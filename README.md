@@ -1,43 +1,9 @@
 # Object Counter Challenge
-
-## Overview
 The goal of this repository is to demonstrate how to apply **Hexagonal Architecture (Ports & Adapters)** in a Machine Learning based system.
 
-This application exposes two Flask APIs that both receive:
-
-* An image
-* A confidence threshold
-
-and returns:
-
-1. Count of objects detected in the current image, along with total cummulative counts of all detected objects previously
-2. List of objects returned for a particular threshold
-
-The object detection model is served through TensorFlow Serving using the SSD MobileNet V2 model trained on the COCO dataset.
-
----
-
 # Architecture
-
 The application follows a Hexagonal Architecture pattern and is composed of three main layers:
-
-## EntryPoints
-Responsible for:
-* Exposing REST APIs
-* Receiving requests
-* Validating inputs
-* Returning responses
-
-## Domain
-Responsible for:
-* Business logic
-* Orchestrating interactions between adapters and models
-
-## Adapters
-Responsible for:
-* Communicating with external services
-* Translating domain models into external representations
-* Translating external responses into domain objects
+Entrypoints, Domain and Adapters
 
 ## Database Support
 Supports:
@@ -52,48 +18,95 @@ Includes:
 * End-to-End (E2E) Tests
 
 ---
-
 # Quick Start
 
-## Prerequisites
-
 The following software must be installed:
-
 * Python 3.10+
 * Docker
 
 Verify installation:
-
 ```bash
 python3 --version
 docker --version
 ```
-
 ## Clone Repository
 
 ```bash
 git clone https://github.com/joshuadominic0598/object-detection-assignment
 cd object-detection-assignment
 ```
+# Make Commands
+
+The project provides several Make targets to simplify common workflows.
 
 ## Start Application
+
+Starts the complete application stack:
 
 ```bash
 make start
 ```
 
-The setup process is fully automated.
+This will:
 
-The startup script will automatically:
-
-* Create a Python virtual environment
-* Install Python dependencies
-* Create a default `.env` file if one does not exist
+* Create the Python virtual environment if required
+* Install dependencies
 * Download the TensorFlow model
 * Start TensorFlow Serving
-* Start the configured database (MySQL or MongoDB)
-* Create required database objects
+* Start MySQL or MongoDB
+* Initialize database objects
 * Launch the Flask application
+
+---
+
+## Stop Services
+Stops all Docker services:
+
+```bash
+make stop
+```
+---
+
+## Run Unit Tests
+Runs all unit tests:
+
+```bash
+make test
+```
+---
+
+## Run Integration Tests
+Runs integration tests against external dependencies such as:
+* TensorFlow Serving
+* MySQL
+* MongoDB
+
+```bash
+make integration
+```
+---
+
+## Run End-to-End Tests
+Runs complete application validation tests:
+
+```bash
+make e2e
+```
+These tests exercise the full stack including:
+* Flask APIs
+* TensorFlow Serving
+* Database persistence
+* Domain logic
+
+---
+
+## Generate Monitoring Dashboard
+Creates an interactive HTML dashboard from monitoring data:
+
+```bash
+make dashboard
+```
+The dashboard is automatically opened in your browser after generation.
 
 Application URL:
 
@@ -177,7 +190,7 @@ pytest
 pytest tests/integration -v
 ```
 
-## Run E2E Tests
+## Run E2E Tests - Uses test cases as ground truth and test images as data
 - test end to end working of the app, set your own test cases and get feedback on performance
 
 ```bash
@@ -189,9 +202,7 @@ pytest tests/e2e -v
 ```bash
 pytest tests/e2e/test_object_class.py -v
 pytest tests/e2e/test_object_persistance.py -v
-
 ```
-We can establish what classes we hope to detect from an image as well as, what total counts we expect if the model runs through the list of images. This directly helps tune the thresholding required for a particular use case.
 ---
 
 ### Object Detection Validation
@@ -268,9 +279,90 @@ Ensures:
 * total_objects reflects cumulative persisted counts
 
 ---
+# API Monitoring & Dashboard
+
+The application includes built-in monitoring capabilities to track API behavior, model predictions, and operational metrics.
+
+All monitoring information is persisted to MySQL and can be visualized through an automatically generated HTML dashboard.
+
+## Request Monitoring
+
+Every API request is logged to the `api_request_log` table.
+
+Captured fields include:
+
+* Request timestamp
+* Endpoint
+* Uploaded image name
+* Confidence threshold
+* Response time (milliseconds)
+* Number of detected objects
+* Unique detected classes
+* HTTP status code
+* Success / failure status
+* Error message (if applicable)
+
+Example:
+
+| endpoint      | image_name | detected_classes | response_time_ms |
+| ------------- | ---------- | ---------------- | ---------------- |
+| /object-count | cat.jpg    | cat              | 982              |
+| /object-list  | people.jpg | person,dog       | 1145             |
+
+---
+
+## Prediction Monitoring
+
+Every detected prediction is logged to the `prediction_log` table.
+
+Captured fields include:
+
+* Request timestamp
+* Endpoint
+* Image name
+* Object class
+* Confidence score
+
+Example:
+
+| endpoint      | object_class | confidence |
+| ------------- | ------------ | ---------- |
+| /object-list  | person       | 0.994      |
+| /object-list  | dog          | 0.912      |
+| /object-count | cat          | 0.997      |
+
+This allows detailed analysis of model behavior over time.
+
+---
+
+## Dashboard Generation
+
+Generate a monitoring dashboard using:
+
+```bash
+make dashboard
+```
+
+The dashboard is generated from monitoring tables and automatically opened in your browser.
+
+---
+
+## Dashboard Contents
+
+* The dashboard includes:
+* Dashboard Features
+* Total requests breakdown (Success vs Failure)
+* Requests by endpoint (/object-count vs /object-list)
+* Response time distribution histogram
+* Top 20 detected object classes by frequency
+* Prediction confidence score distribution
+* Detection failure rate (% of requests with no objects detected)
+* Current cumulative object counts from database
+* Latest 20 API request records
+* Latest 20 prediction records
+* Request auditing (image name, threshold, response time, status)
 
 # Notes
-
 * The first startup may take several minutes because the TensorFlow model is downloaded automatically.
 * Subsequent startups reuse the downloaded model.
 * Object counts persist across requests when using a real database - Otherwise need to set up .env file connected to your MYSQL instance - then requests modify only your table.
