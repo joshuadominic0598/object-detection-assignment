@@ -12,7 +12,6 @@ class PredictionService:
         self._object_detector = object_detector
 
     def get_valid_predictions(self, image, threshold):
-
         predictions = self._object_detector.predict(image)
         self._debug_image(image,predictions,"all_predictions")
         valid_predictions = list(over_threshold(predictions,threshold=threshold))
@@ -33,7 +32,6 @@ class CountDetectedObjects:
         self.__object_count_repo = object_count_repo
 
     def execute(self,image,threshold) -> CountResponse:
-
         predictions = self.__prediction_service.get_valid_predictions(image,threshold)
         object_counts = count(predictions)
         self.__object_count_repo.update_values(object_counts)
