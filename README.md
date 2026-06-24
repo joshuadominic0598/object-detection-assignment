@@ -4,12 +4,13 @@ The goal of this repository is to demonstrate how to apply **Hexagonal Architect
 # Architecture
 The application follows a Hexagonal Architecture pattern and is composed of three main layers:
 Entrypoints, Domain and Adapters
+![Hexagonal Architecture](resources/images/architecture/Hexagonal%20Architecture.jpg)
 
 ## Database Support
 Supports:
 * MySQL
 * MongoDB
-Database selection is configurable through environment variables.
+Database selection is configurable through environment variables. Only MySQL has dashboard support.
 
 ## Automated Testing
 Includes:
