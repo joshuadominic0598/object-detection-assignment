@@ -1,67 +1,66 @@
 import os
-
-from counter.adapters.count_repo import CountMongoDBRepo, CountInMemoryRepo
-from counter.adapters.object_detector import TFSObjectDetector, FakeObjectDetector
-from counter.adapters.count_mysql_repo import CountMySQLRepo
-from counter.domain.actions import CountDetectedObjects,ListDetectedObjects
-from counter.adapters.monitoring.mysql_monitor import MysqlMonitor
-
 from dotenv import load_dotenv
+from counter.adapters.count_repo import CountMongoDBRepo, CountInMemoryRepo
+from counter.adapters.count_mysql_repo import CountMySQLRepo
+from counter.adapters.object_detector import TFSObjectDetector, FakeObjectDetector
+from counter.adapters.monitoring import TestMonitor
+from counter.adapters.monitoring.mysql_monitor import MysqlMonitor
+from counter.domain.actions import CountDetectedObjects, ListDetectedObjects
+
 load_dotenv()
 
-def dev_count_action() -> CountDetectedObjects:
-    return CountDetectedObjects(FakeObjectDetector(), CountInMemoryRepo())
+ENV = os.getenv("ENV", "dev")
 
-def dev_object_list_action() -> ListDetectedObjects:
+TFS_HOST = os.getenv("TFS_HOST", "localhost")
+TFS_PORT = int(os.getenv("TFS_PORT", 8501))
+MODEL_NAME = os.getenv("MODEL_NAME", "ssd_mobilenet_v2")
+
+DB_TYPE = os.getenv("DB_TYPE", "mongodb")
+
+MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
+MYSQL_PORT = int(os.getenv("MYSQL_PORT", 3306))
+MYSQL_USER = os.getenv("MYSQL_USER", "root")
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
+MYSQL_DB = os.getenv("MYSQL_DB", "counter")
+
+MONGO_HOST = os.getenv("MONGO_HOST", "localhost")
+MONGO_PORT = int(os.getenv("MONGO_PORT", 27017))
+MONGO_DB = os.getenv("MONGO_DB", "prod_counter")
+
+
+def get_detector():
+    return TFSObjectDetector(TFS_HOST, TFS_PORT, MODEL_NAME)
+
+def get_repo():
+    if DB_TYPE == "mysql":
+        return CountMySQLRepo(host=MYSQL_HOST,port=MYSQL_PORT,user=MYSQL_USER,password=MYSQL_PASSWORD,database=MYSQL_DB)
+    return CountMongoDBRepo(host=MONGO_HOST,port=MONGO_PORT,database=MONGO_DB)
+
+def dev_count_action():
+    return CountDetectedObjects(FakeObjectDetector(),CountInMemoryRepo())
+
+def dev_object_list_action():
     return ListDetectedObjects(FakeObjectDetector())
 
-def prod_count_action() -> CountDetectedObjects:
-    tfs_host = os.environ.get('TFS_HOST', 'localhost')
-    tfs_port = os.environ.get('TFS_PORT', 8501)
-    model_name = os.environ.get('MODEL_NAME', 'ssd_mobilenet_v2')
-    db_type = os.environ.get('DB_TYPE', 'mongodb')
-    if db_type == 'mysql':
-        mysql_host = os.environ.get('MYSQL_HOST', 'localhost')
-        mysql_port = int(os.environ.get('MYSQL_PORT', 3306))
-        mysql_user = os.environ.get('MYSQL_USER', 'root')
-        mysql_password = os.environ.get('MYSQL_PASSWORD', '')
-        mysql_db = os.environ.get('MYSQL_DB', 'counter')
-        repo = CountMySQLRepo(host=mysql_host,port=mysql_port,user=mysql_user,password=mysql_password,database=mysql_db)
-    else:
-        mongo_host = os.environ.get('MONGO_HOST', 'localhost')
-        mongo_port = os.environ.get('MONGO_PORT', 27017)
-        mongo_db = os.environ.get('MONGO_DB', 'prod_counter')
-        repo = CountMongoDBRepo(host=mongo_host,port=mongo_port,database=mongo_db)
+def prod_count_action():
+    return CountDetectedObjects(get_detector(),get_repo())
 
-    return CountDetectedObjects(TFSObjectDetector(tfs_host, tfs_port, model_name),repo)
+def prod_object_list_action():
+    return ListDetectedObjects(get_detector())
 
-def prod_object_list_action() -> ListDetectedObjects:
-    tfs_host = os.environ.get('TFS_HOST', 'localhost')
-    tfs_port = os.environ.get('TFS_PORT', 8501)
-    model_name = os.environ.get('MODEL_NAME', 'ssd_mobilenet_v2')
-    return ListDetectedObjects(TFSObjectDetector(tfs_host,tfs_port,model_name))
-
-def get_count_action() -> CountDetectedObjects:
-    env = os.environ.get('ENV', 'dev')
-    count_action_fn = f"{env}_count_action"
-    return globals()[count_action_fn]()
+def get_count_action():
+    if ENV == "prod":
+        return prod_count_action()
+    return dev_count_action()
 
 def get_object_list_action():
-    env = os.environ.get('ENV', 'dev')
-    action_fn = f"{env}_object_list_action"
-    return globals()[action_fn]()
+    if ENV == "prod":
+        return prod_object_list_action()
+    return dev_object_list_action()
 
 def get_monitor():
-    env = os.environ.get('ENV', 'dev')
-    if env != "prod":
+    if ENV != "prod":
         return TestMonitor()
-    mysql_host = os.environ.get('MYSQL_HOST', 'localhost')
-    mysql_port = int(os.environ.get('MYSQL_PORT', 3306))
-    mysql_user = os.environ.get('MYSQL_USER', 'root')
-    mysql_password = os.environ.get('MYSQL_PASSWORD', '')
-    mysql_db = os.environ.get('MYSQL_DB', 'counter')
-    db_type = os.environ.get('DB_TYPE')
-    if db_type == "mysql":
-        return MysqlMonitor(host=mysql_host,port=mysql_port,user=mysql_user,password=mysql_password,database=mysql_db)
-
+    if DB_TYPE == "mysql":
+        return MysqlMonitor(host=MYSQL_HOST,port=MYSQL_PORT,user=MYSQL_USER,password=MYSQL_PASSWORD,database=MYSQL_DB)
     return TestMonitor()
