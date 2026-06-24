@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from counter.adapters.count_repo import CountMongoDBRepo, CountInMemoryRepo
 from counter.adapters.count_mysql_repo import CountMySQLRepo
 from counter.adapters.object_detector import TFSObjectDetector, FakeObjectDetector
-from counter.adapters.monitoring import TestMonitor
+from counter.adapters.monitoring.test_monitor import TestMonitor
 from counter.adapters.monitoring.mysql_monitor import MysqlMonitor
 from counter.domain.actions import CountDetectedObjects, ListDetectedObjects
 
